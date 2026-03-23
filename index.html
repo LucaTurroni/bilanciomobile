@@ -10,7 +10,77 @@
 <meta name="theme-color" content="#3b82f6" id="theme-color-meta">
 <title>Bilancio Mobile</title>
 
-<!-- PWA Manifest inline via JS -->
+<!-- Service Worker — aggiornamento automatico -->
+<script>
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+
+  // SW code as a string — increment CACHE_VERSION to force update
+  var swCode = `
+const CACHE_VERSION = 'cm-1.1';
+const CACHE_NAME = 'bilancio-' + CACHE_VERSION;
+
+self.addEventListener('install', function(e){
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(e){
+  e.waitUntil(
+    caches.keys().then(function(keys){
+      return Promise.all(
+        keys.filter(function(k){ return k !== CACHE_NAME; })
+            .map(function(k){ return caches.delete(k); })
+      );
+    }).then(function(){ return self.clients.claim(); })
+  );
+});
+
+self.addEventListener('fetch', function(e){
+  // Network first: sempre prova la rete, fallback cache
+  e.respondWith(
+    fetch(e.request).then(function(response){
+      if(response && response.status === 200){
+        var clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache){
+          cache.put(e.request, clone);
+        });
+      }
+      return response;
+    }).catch(function(){
+      return caches.match(e.request);
+    })
+  );
+});
+`;
+
+  var blob = new Blob([swCode], { type: 'application/javascript' });
+  var swUrl = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(swUrl, { scope: '/' })
+    .then(function(reg){
+      // Controlla aggiornamenti ogni volta che l'app viene aperta
+      reg.update();
+      reg.addEventListener('updatefound', function(){
+        var newSW = reg.installing;
+        newSW.addEventListener('statechange', function(){
+          if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+            navigator.serviceWorker.addEventListener('controllerchange', function(){
+              // Mostra notifica aggiornamento prima di ricaricare
+              var t = document.createElement('div');
+              t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
+              t.textContent = '✓ App aggiornata a Versione_1.1';
+              document.body.appendChild(t);
+              setTimeout(function(){ window.location.reload(); }, 1800);
+            });
+            newSW.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
+      });
+    })
+    .catch(function(){});
+})();
+</script>
+
 <script>
 (function(){
   var manifest = {
@@ -754,7 +824,7 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">C.M_1.0</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione_1.1</span>
       </div>
     </div>
 
