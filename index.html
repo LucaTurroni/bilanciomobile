@@ -780,6 +780,15 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
       <div class="sec-hdr">Impostazioni</div>
       <div class="sec-sub">Configura l'app</div>
 
+      <div class="setting-item" onclick="checkForUpdates()">
+        <span class="si-ico">🔄</span>
+        <div class="si-body">
+          <div class="si-title">Controlla aggiornamenti</div>
+          <div class="si-desc" id="update-desc">Cerca nuova versione disponibile</div>
+        </div>
+        <span class="si-arr">›</span>
+      </div>
+
       <div class="setting-item" onclick="openDrawer('import-cats')">
         <span class="si-ico">🗂</span>
         <div class="si-body">
@@ -1775,6 +1784,42 @@ function updateFsBtn(){
   btn.style.background = isFs ? 'rgba(239,68,68,.1)' : 'rgba(59,130,246,.1)';
   btn.style.borderColor = isFs ? 'rgba(239,68,68,.3)' : 'rgba(59,130,246,.3)';
   btn.style.color = isFs ? 'var(--red)' : 'var(--blue)';
+}
+
+// ═══════════════════════════════════════
+// CHECK FOR UPDATES
+// ═══════════════════════════════════════
+function checkForUpdates(){
+  var desc = document.getElementById('update-desc');
+  if(!('serviceWorker' in navigator)){
+    toast('Service Worker non supportato', true);
+    return;
+  }
+  if(desc) desc.textContent = 'Ricerca in corso…';
+  navigator.serviceWorker.getRegistration().then(function(reg){
+    if(!reg){
+      if(desc) desc.textContent = 'Cerca nuova versione disponibile';
+      toast('Nessun aggiornamento trovato', true);
+      return;
+    }
+    reg.update().then(function(){
+      if(reg.waiting){
+        if(desc) desc.textContent = 'Aggiornamento trovato!';
+        toast('Aggiornamento trovato — riavvio in corso…');
+        setTimeout(function(){ reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }, 1000);
+      } else if(reg.installing){
+        if(desc) desc.textContent = 'Download in corso…';
+        toast('Download aggiornamento in corso…');
+      } else {
+        if(desc) desc.textContent = 'Sei già all\'ultima versione ✓';
+        toast('Sei già all\'ultima versione!');
+        setTimeout(function(){ if(desc) desc.textContent = 'Cerca nuova versione disponibile'; }, 3000);
+      }
+    }).catch(function(){
+      if(desc) desc.textContent = 'Cerca nuova versione disponibile';
+      toast('Errore — controlla la connessione', true);
+    });
+  });
 }
 
 var drawerMap = {
