@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimal-ui">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Bilancio">
@@ -497,34 +497,6 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
   animation:toastIn .25s ease;
 }
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
-
-/* ═══════════════════════════════════════
-   SWIPE ACTIONS
-═══════════════════════════════════════ */
-.tx-wrap{position:relative;overflow:hidden;border-radius:var(--r-s);margin-bottom:10px;}
-.tx-actions{
-  position:absolute;right:0;top:0;bottom:0;
-  display:flex;align-items:stretch;
-}
-.tx-action-edit{
-  width:64px;background:var(--blue);
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.3rem;cursor:pointer;flex-shrink:0;
-}
-.tx-action-del{
-  width:64px;background:var(--red);
-  display:flex;align-items:center;justify-content:center;
-  font-size:1.3rem;cursor:pointer;flex-shrink:0;
-  border-radius:0 var(--r-s) var(--r-s) 0;
-}
-.tx-item{
-  position:relative;z-index:1;
-  transform:translateX(0);
-  transition:transform .22s cubic-bezier(.32,.72,0,1);
-  will-change:transform;
-  margin-bottom:0;
-  cursor:grab;
-}
 
 /* DATE GROUP LABEL
 ═══════════════════════════════════════ */
@@ -1191,7 +1163,7 @@ function setQType(type){
 var npRaw = '0'; // string representation
 
 function npKey(k){
-  if(navigator.vibrate) navigator.vibrate(k === 'del' || k === 'clear' ? 18 : 8);
+  if(navigator.vibrate) navigator.vibrate(k === 'del' || k === 'clear' ? 20 : 10);
   if(k === 'clear'){ npRaw = '0'; }
   else if(k === 'del'){
     npRaw = npRaw.slice(0,-1);
@@ -1337,75 +1309,6 @@ function setFilter(f, el){
   drawList();
 }
 
-// ═══════════════════════════════════════
-// SWIPE TO REVEAL ACTIONS
-// ═══════════════════════════════════════
-var swipeState = { id: null, startX: 0, startY: 0, dx: 0, swiping: false, opened: null };
-var SWIPE_THRESHOLD = 60; // px to open
-var SWIPE_FULL = 128;     // total revealed width (edit + delete)
-
-document.addEventListener('touchstart', function(e){
-  var item = e.target.closest('.tx-item');
-  if(!item) return;
-  var id = parseInt(item.id.replace('txi-',''));
-  // close any other open item
-  if(swipeState.opened && swipeState.opened !== id) resetSwipe(swipeState.opened);
-  swipeState.id = id;
-  swipeState.startX = e.touches[0].clientX;
-  swipeState.startY = e.touches[0].clientY;
-  swipeState.dx = 0;
-  swipeState.swiping = false;
-}, {passive:true});
-
-document.addEventListener('touchmove', function(e){
-  if(!swipeState.id) return;
-  var dx = e.touches[0].clientX - swipeState.startX;
-  var dy = e.touches[0].clientY - swipeState.startY;
-  // Ignore vertical scroll
-  if(!swipeState.swiping && Math.abs(dy) > Math.abs(dx)) { swipeState.id = null; return; }
-  swipeState.swiping = true;
-  var newDx = Math.max(-SWIPE_FULL, Math.min(0, dx));
-  swipeState.dx = newDx;
-  var el = document.getElementById('txi-'+swipeState.id);
-  if(el) el.style.transition = 'none';
-  if(el) el.style.transform = 'translateX('+newDx+'px)';
-}, {passive:true});
-
-document.addEventListener('touchend', function(){
-  if(!swipeState.id) return;
-  var el = document.getElementById('txi-'+swipeState.id);
-  if(el) el.style.transition = '';
-  if(swipeState.dx < -SWIPE_THRESHOLD){
-    // snap open
-    if(el) el.style.transform = 'translateX(-'+SWIPE_FULL+'px)';
-    swipeState.opened = swipeState.id;
-    if(navigator.vibrate) navigator.vibrate(12);
-  } else {
-    // snap closed
-    if(el) el.style.transform = 'translateX(0)';
-    swipeState.opened = null;
-  }
-  swipeState.id = null;
-  swipeState.swiping = false;
-});
-
-function resetSwipe(id){
-  var el = document.getElementById('txi-'+id);
-  if(el){ el.style.transition = ''; el.style.transform = 'translateX(0)'; }
-  if(swipeState.opened === id) swipeState.opened = null;
-}
-
-// Tap on non-action area closes open swipe
-document.addEventListener('touchstart', function(e){
-  if(swipeState.opened && !e.target.closest('.tx-action-edit') && !e.target.closest('.tx-action-del')){
-    var item = e.target.closest('.tx-item');
-    if(!item || parseInt(item.id.replace('txi-','')) !== swipeState.opened){
-      resetSwipe(swipeState.opened);
-    }
-  }
-}, {passive:true});
-
-
 function drawList(){
   var search = (document.getElementById('search-inp').value || '').toLowerCase();
   var monthFilter = document.getElementById('list-month').value || '';
@@ -1452,19 +1355,15 @@ function drawList(){
       var isC = isCopCat(t.cat);
       var cls = t.type === 'income' ? 'income' : isC ? 'couple' : 'expense';
       var sign = t.type === 'income' ? '+' : '−';
-      h += '<div class="tx-wrap" id="txw-'+t.id+'">'
-        + '<div class="tx-actions">'
-        + '<div class="tx-action-edit" onclick="editTx('+t.id+');resetSwipe('+t.id+')">✏️</div>'
-        + '<div class="tx-action-del" onclick="deleteTx('+t.id+')">🗑</div>'
-        + '</div>'
-        + '<div class="tx-item" id="txi-'+t.id+'">'
+      h += '<div class="tx-item">'
         + '<div class="tx-dot '+cls+'"></div>'
         + '<div class="tx-body">'
         + '<div class="tx-name">'+escH(t.name)+'</div>'
         + '<div class="tx-meta">'+escH(t.cat)+'</div>'
         + '</div>'
         + '<div class="tx-amt '+cls+'">'+sign+' €'+fmt(t.amount)+'</div>'
-        + '</div>'
+        + '<button class="tx-del" onclick="editTx('+t.id+')" style="color:var(--blue);border-color:rgba(59,130,246,.3);background:var(--blue-s)">✏️</button>'
+        + '<button class="tx-del" onclick="deleteTx('+t.id+')">🗑</button>'
         + '</div>';
     });
   });
@@ -1871,6 +1770,22 @@ function confirmExit(){
   checkNoCats();
   drawHomeStats();
   updateSettingsPage();
+
+  // Fullscreen: tenta subito, poi al primo touch come fallback
+  function tryFS(){
+    var el = document.documentElement;
+    var p = el.requestFullscreen ? el.requestFullscreen()
+          : el.webkitRequestFullscreen ? el.webkitRequestFullscreen()
+          : null;
+    if(p) p.catch(function(){});
+  }
+  // Tentativo immediato (funziona se il browser lo permette senza gesto)
+  tryFS();
+  // Fallback: al primo touch (necessario su alcuni browser)
+  document.addEventListener('touchstart', function handler(){
+    tryFS();
+    document.removeEventListener('touchstart', handler);
+  }, { once: true, passive: true });
 })();
 </script>
 
