@@ -17,7 +17,7 @@
 
   // SW code as a string — increment CACHE_VERSION to force update
   var swCode = `
-const CACHE_VERSION = 'cm-1.1';
+const CACHE_VERSION = 'cm-1.2';
 const CACHE_NAME = 'bilancio-' + CACHE_VERSION;
 
 self.addEventListener('install', function(e){
@@ -68,7 +68,7 @@ self.addEventListener('fetch', function(e){
               // Mostra notifica aggiornamento prima di ricaricare
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione_1.1';
+              t.textContent = '✓ App aggiornata a Versione 1.2';
               document.body.appendChild(t);
               setTimeout(function(){ window.location.reload(); }, 1800);
             });
@@ -792,8 +792,8 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
       <div class="setting-item" onclick="openDrawer('import-cats')">
         <span class="si-ico">🗂</span>
         <div class="si-body">
-          <div class="si-title">Importa categorie</div>
-          <div class="si-desc">Carica il file "CATEGORIE XX.XX" dall'app desktop</div>
+          <div class="si-title">Mostra / Importa categorie</div>
+          <div class="si-desc">Visualizza e aggiorna le categorie caricate</div>
         </div>
         <span class="si-arr">›</span>
       </div>
@@ -803,6 +803,15 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
         <div class="si-body">
           <div class="si-title">Email di default</div>
           <div class="si-desc" id="email-desc">Non configurata</div>
+        </div>
+        <span class="si-arr">›</span>
+      </div>
+
+      <div class="setting-item" onclick="openDrawer('haptic')">
+        <span class="si-ico">📳</span>
+        <div class="si-body">
+          <div class="si-title">Feedback aptico</div>
+          <div class="si-desc" id="haptic-desc">Non configurato</div>
         </div>
         <span class="si-arr">›</span>
       </div>
@@ -825,15 +834,9 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
         <span class="si-arr" style="color:var(--red)">›</span>
       </div>
 
-      <!-- Info categorie -->
-      <div class="card" style="margin-top:6px">
-        <div class="card-title">Categorie caricate</div>
-        <div id="cats-info" style="font-size:.84rem;color:var(--sub)">Nessuna categoria.</div>
-      </div>
-
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione_1.1</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.2</span>
       </div>
     </div>
 
@@ -941,18 +944,95 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
   <div class="drawer">
     <div class="drawer-handle"></div>
     <div class="drawer-hdr">
-      <span class="drawer-title">Importa categorie</span>
+      <span class="drawer-title">Mostra / Importa categorie</span>
       <button class="drawer-close" onclick="closeOverlayById('overlay-import-cats')">✕</button>
     </div>
     <div class="drawer-body">
-      <p style="font-size:.85rem;color:var(--sub);margin-bottom:16px;line-height:1.6">
-        Carica il file <strong>CATEGORIE XX.XX</strong> esportato dall'app desktop. Le categorie esistenti verranno sostituite.
-      </p>
-      <input type="file" id="cats-file" accept=".json" style="display:none" onchange="importCatsFile(this)">
-      <button class="btn btn-primary" onclick="document.getElementById('cats-file').click()">
-        📂 &nbsp;Seleziona file
-      </button>
-      <div id="cats-import-result" style="margin-top:14px;font-size:.84rem"></div>
+      <!-- Categorie attualmente caricate -->
+      <div id="cats-current-display" style="margin-bottom:20px"></div>
+      <!-- Separatore -->
+      <div style="border-top:1px solid var(--border);padding-top:18px">
+        <p style="font-size:.82rem;color:var(--sub);margin-bottom:14px;line-height:1.6">
+          Carica il file <strong>CATEGORIE XX.XX</strong> esportato dall'app desktop per aggiornare le categorie.
+        </p>
+        <input type="file" id="cats-file" accept=".json" style="display:none" onchange="importCatsFile(this)">
+        <button class="btn btn-primary" onclick="document.getElementById('cats-file').click()">
+          📂 &nbsp;Seleziona file
+        </button>
+        <div id="cats-import-result" style="margin-top:14px;font-size:.84rem"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Migration Drawer -->
+<div class="overlay" id="overlay-migration" style="align-items:center">
+  <div class="confirm-dialog" style="max-height:85vh;overflow-y:auto;max-width:460px;width:calc(100% - 40px)">
+    <p style="font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);margin-bottom:8px">⚠️ Categorie rimosse</p>
+    <p style="font-size:.85rem;color:var(--sub);margin-bottom:16px;line-height:1.6">Il nuovo file non contiene alcune categorie già usate. Le transazioni collegate potrebbero non essere più correttamente classificate.</p>
+    <div id="migration-list" style="margin-bottom:16px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" onclick="proceedMigration()">✓ &nbsp;Procedi e gestisci le transazioni</button>
+      <button class="btn btn-ghost" onclick="closeMigration()">Annulla — non cambiare nulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- Remap single category drawer -->
+<div class="overlay" id="overlay-remap" style="align-items:center">
+  <div class="confirm-dialog" style="max-width:460px;width:calc(100% - 40px)">
+    <p style="font-size:.8rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);margin-bottom:6px">Gestisci transazioni</p>
+    <p id="remap-title" style="font-size:.9rem;font-weight:600;margin-bottom:14px"></p>
+    <p id="remap-count" style="font-size:.82rem;color:var(--sub);margin-bottom:16px"></p>
+    <div class="field">
+      <label>Cosa fare con queste transazioni?</label>
+      <select class="inp" id="remap-action">
+        <option value="keep">Mantieni (tieni la categoria originale)</option>
+        <option value="remap">Rimappa su un'altra categoria</option>
+        <option value="delete">Elimina le transazioni</option>
+      </select>
+    </div>
+    <div id="remap-target-wrap" style="display:none" class="field">
+      <label>Nuova categoria</label>
+      <select class="inp" id="remap-target"></select>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyRemap()">Conferma</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="skipRemap()">Salta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Haptic Drawer -->
+<div class="overlay" id="overlay-haptic" onclick="closeOverlay('overlay-haptic',event)">
+  <div class="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-hdr">
+      <span class="drawer-title">Feedback aptico</span>
+      <button class="drawer-close" onclick="closeOverlayById('overlay-haptic')">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <span style="font-size:.92rem;font-weight:600">Vibrazione attiva</span>
+        <label class="sw">
+          <input type="checkbox" id="haptic-chk" onchange="toggleHaptic(this.checked)">
+          <span class="sw-t"></span><span class="sw-k"></span>
+        </label>
+      </div>
+      <div id="haptic-strength-wrap">
+        <div class="field" style="margin-bottom:8px">
+          <label>Intensità</label>
+          <input type="range" id="haptic-strength" min="5" max="50" step="5" value="10"
+            oninput="updateHapticStrength(this.value)"
+            style="width:100%;accent-color:var(--blue);cursor:pointer">
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--sub);margin-bottom:16px">
+          <span>Leggera</span><span>Media</span><span>Forte</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="testHaptic()" style="width:auto">
+          📳 &nbsp;Prova vibrazione
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1076,7 +1156,9 @@ var S = {
   txs: [],
   cats: { eCats: [], cCats: [] },  // mirrored from desktop
   defEmail: '',
-  theme: 'light'
+  theme: 'light',
+  hapticEnabled: true,
+  hapticStrength: 10
 };
 var RESET_PWD = 'ADMINADMIN';
 var currentFilter = 'all';
@@ -1183,23 +1265,78 @@ function checkNoCats(){
   if(el) el.style.display = hasCats ? 'none' : '';
 }
 
+// ═══════════════════════════════════════
+// CATEGORIES — SHOW & IMPORT
+// ═══════════════════════════════════════
+var pendingNewCats = null; // cats waiting to be applied after migration
+var migrationQueue = [];   // categories to migrate one by one
+var migrationIdx = 0;
+
+function openDrawer(name){
+  var id = drawerMap[name];
+  if(!id) return;
+  if(name === 'set-email') document.getElementById('def-email-inp').value = S.defEmail || '';
+  if(name === 'import-cats') renderCatsDisplay();
+  if(name === 'haptic') renderHapticDrawer();
+  openOverlayById(id);
+}
+
+function renderCatsDisplay(){
+  var el = document.getElementById('cats-current-display');
+  if(!el) return;
+  var e = S.cats.eCats || [], c = S.cats.cCats || [];
+  if(!e.length && !c.length){
+    el.innerHTML = '<p style="font-size:.84rem;color:var(--sub);font-style:italic">Nessuna categoria caricata.</p>';
+    return;
+  }
+  var h = '<p style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);margin-bottom:10px">Categorie attuali</p>';
+  if(e.length){
+    h += '<p style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px">Personali</p>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+    e.forEach(function(c){ h += '<span style="background:var(--red-s);color:var(--red-d);padding:4px 10px;border-radius:12px;font-size:.75rem;font-weight:600">'+escH(c)+'</span>'; });
+    h += '</div>';
+  }
+  if(c.length){
+    h += '<p style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px">Coppia 💑</p>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+    c.forEach(function(cat){ h += '<span style="background:var(--purple-s);color:var(--purple);padding:4px 10px;border-radius:12px;font-size:.75rem;font-weight:600">'+escH(cat)+'</span>'; });
+    h += '</div>';
+  }
+  el.innerHTML = h;
+}
+
 function importCatsFile(input){
   var file = input.files[0]; if(!file) return;
   var r = new FileReader();
   r.onload = function(e){
     try{
       var p = JSON.parse(e.target.result);
-      // Accept both: desktop full backup (has eCats/cCats) or dedicated export
-      var eCats = p.eCats || p.cats && p.cats.eCats || [];
-      var cCats = p.cCats || p.cats && p.cats.cCats || [];
-      if(!eCats.length && !cCats.length) throw new Error('nessuna categoria trovata');
-      S.cats = { eCats: eCats, cCats: cCats };
-      save();
-      fillCatSelect('q-cat', currentQTxType);
-      updateSettingsPage();
-      var res = document.getElementById('cats-import-result');
-      if(res) res.innerHTML = '<span style="color:var(--green-d)">✓ Importate '+eCats.length+' categorie personali e '+cCats.length+' categorie coppia.</span>';
-      toast('Categorie importate!');
+      var newECats = p.eCats || (p.cats && p.cats.eCats) || [];
+      var newCCats = p.cCats || (p.cats && p.cats.cCats) || [];
+      if(!newECats.length && !newCCats.length) throw new Error('nessuna categoria trovata');
+
+      // Find categories that exist now but are missing in new file
+      var allOld = (S.cats.eCats||[]).concat((S.cats.cCats||[]).map(function(c){ return c+' 💑'; }));
+      var allNew = newECats.concat(newCCats.map(function(c){ return c+' 💑'; }));
+      var removed = allOld.filter(function(c){ return allNew.indexOf(c) === -1; });
+
+      // Check which removed cats have transactions
+      var removedWithTxs = removed.filter(function(cat){
+        return S.txs.some(function(t){ return t.cat === cat; });
+      });
+
+      if(removedWithTxs.length > 0){
+        // Show warning and start migration flow
+        pendingNewCats = { eCats: newECats, cCats: newCCats };
+        showMigrationWarning(removedWithTxs, allNew);
+      } else {
+        // Safe to apply directly
+        applyCats({ eCats: newECats, cCats: newCCats });
+        var res = document.getElementById('cats-import-result');
+        if(res) res.innerHTML = '<span style="color:var(--green-d)">✓ '+newECats.length+' categorie personali e '+newCCats.length+' di coppia caricate.</span>';
+        renderCatsDisplay();
+        toast('Categorie aggiornate!');
+      }
     }catch(err){
       var res = document.getElementById('cats-import-result');
       if(res) res.innerHTML = '<span style="color:var(--red-d)">✕ File non valido: '+escH(err.message)+'</span>';
@@ -1209,6 +1346,138 @@ function importCatsFile(input){
   };
   r.readAsText(file);
 }
+
+function applyCats(cats){
+  S.cats = cats;
+  save();
+  fillCatSelect('q-cat', currentQTxType);
+  updateSettingsPage();
+}
+
+// ═══════════════════════════════════════
+// MIGRATION FLOW
+// ═══════════════════════════════════════
+function showMigrationWarning(removedWithTxs, allNewCats){
+  var el = document.getElementById('migration-list');
+  if(!el) return;
+  var h = '';
+  removedWithTxs.forEach(function(cat){
+    var count = S.txs.filter(function(t){ return t.cat === cat; }).length;
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--amber-s);border:1.5px solid var(--amber);border-radius:var(--r-s);margin-bottom:8px">'
+      + '<span style="font-size:.85rem;font-weight:600">'+escH(cat)+'</span>'
+      + '<span style="font-size:.75rem;color:var(--sub)">'+count+' transazioni</span>'
+      + '</div>';
+  });
+  el.innerHTML = h;
+  migrationQueue = removedWithTxs.slice();
+  migrationIdx = 0;
+  document.getElementById('overlay-migration').classList.add('open');
+  document.getElementById('overlay-migration').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMigration(){
+  document.getElementById('overlay-migration').classList.remove('open');
+  document.getElementById('overlay-migration').style.display = 'none';
+  pendingNewCats = null;
+  migrationQueue = [];
+  document.body.style.overflow = '';
+}
+
+function proceedMigration(){
+  document.getElementById('overlay-migration').classList.remove('open');
+  document.getElementById('overlay-migration').style.display = 'none';
+  // Apply new cats first
+  applyCats(pendingNewCats);
+  // Start remap queue
+  migrationIdx = 0;
+  showNextRemap();
+}
+
+function showNextRemap(){
+  if(migrationIdx >= migrationQueue.length){
+    // Done
+    document.getElementById('overlay-remap').style.display = 'none';
+    document.body.style.overflow = '';
+    renderCatsDisplay();
+    var res = document.getElementById('cats-import-result');
+    if(res) res.innerHTML = '<span style="color:var(--green-d)">✓ Migrazione completata.</span>';
+    toast('Categorie e migrazione completate!');
+    return;
+  }
+  var cat = migrationQueue[migrationIdx];
+  var count = S.txs.filter(function(t){ return t.cat === cat; }).length;
+  document.getElementById('remap-title').textContent = 'Categoria: "'+cat+'"';
+  document.getElementById('remap-count').textContent = count+' transazioni usano questa categoria.';
+  // Fill remap target select
+  var sel = document.getElementById('remap-target');
+  sel.innerHTML = '';
+  var all = (S.cats.eCats||[]).concat((S.cats.cCats||[]).map(function(c){ return c+' 💑'; }));
+  all.forEach(function(c){
+    var o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
+  });
+  document.getElementById('remap-action').value = 'keep';
+  document.getElementById('remap-target-wrap').style.display = 'none';
+  document.getElementById('overlay-remap').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+document.getElementById('remap-action').addEventListener('change', function(){
+  document.getElementById('remap-target-wrap').style.display = this.value === 'remap' ? '' : 'none';
+});
+
+function applyRemap(){
+  var cat = migrationQueue[migrationIdx];
+  var action = document.getElementById('remap-action').value;
+  if(action === 'delete'){
+    S.txs = S.txs.filter(function(t){ return t.cat !== cat; });
+  } else if(action === 'remap'){
+    var target = document.getElementById('remap-target').value;
+    S.txs = S.txs.map(function(t){ return t.cat === cat ? Object.assign({}, t, {cat: target}) : t; });
+  }
+  // keep: do nothing
+  save();
+  migrationIdx++;
+  showNextRemap();
+}
+
+function skipRemap(){
+  migrationIdx++;
+  showNextRemap();
+}
+
+// ═══════════════════════════════════════
+// HAPTIC FEEDBACK
+// ═══════════════════════════════════════
+function renderHapticDrawer(){
+  var chk = document.getElementById('haptic-chk');
+  var str = document.getElementById('haptic-strength');
+  var wrap = document.getElementById('haptic-strength-wrap');
+  if(chk) chk.checked = S.hapticEnabled !== false;
+  if(str) str.value = S.hapticStrength || 10;
+  if(wrap) wrap.style.opacity = (S.hapticEnabled !== false) ? '1' : '.4';
+  if(wrap) wrap.style.pointerEvents = (S.hapticEnabled !== false) ? '' : 'none';
+}
+
+function toggleHaptic(on){
+  S.hapticEnabled = on;
+  save();
+  renderHapticDrawer();
+  updateSettingsPage();
+  if(on && navigator.vibrate) navigator.vibrate(S.hapticStrength || 10);
+}
+
+function updateHapticStrength(val){
+  S.hapticStrength = parseInt(val);
+  save();
+}
+
+function testHaptic(){
+  if(navigator.vibrate) navigator.vibrate(S.hapticStrength || 10);
+  else toast('Vibrazione non supportata su questo dispositivo', true);
+}
+
+
 
 // ═══════════════════════════════════════
 // TYPE TOGGLE (main form)
@@ -1247,7 +1516,9 @@ function setQType(type){
 var npRaw = '0'; // string representation
 
 function npKey(k){
-  if(navigator.vibrate) navigator.vibrate(k === 'del' || k === 'clear' ? 20 : 10);
+  if(S.hapticEnabled !== false && navigator.vibrate){
+    navigator.vibrate(k === 'del' || k === 'clear' ? Math.min(50, (S.hapticStrength||10)*2) : (S.hapticStrength||10));
+  }
   if(k === 'clear'){ npRaw = '0'; }
   else if(k === 'del'){
     npRaw = npRaw.slice(0,-1);
@@ -1605,18 +1876,16 @@ function updateSettingsPage(){
   var desc = document.getElementById('email-desc');
   if(desc) desc.textContent = em || 'Non configurata';
 
-  var info = document.getElementById('cats-info');
-  if(info){
-    var e = S.cats.eCats ? S.cats.eCats.length : 0;
-    var c = S.cats.cCats ? S.cats.cCats.length : 0;
-    if(!e && !c){
-      info.textContent = 'Nessuna categoria. Importa il file dall\'app desktop.';
+  var hDesc = document.getElementById('haptic-desc');
+  if(hDesc){
+    if(!navigator.vibrate){
+      hDesc.textContent = 'Non supportato su questo dispositivo';
+    } else if(S.hapticEnabled === false){
+      hDesc.textContent = 'Disattivato';
     } else {
-      info.innerHTML = '<strong>'+e+'</strong> categorie personali &nbsp;·&nbsp; <strong>'+c+'</strong> categorie coppia'
-        + (S.cats.eCats && S.cats.eCats.length ? '<div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">'
-          + S.cats.eCats.map(function(c){ return '<span style="background:var(--red-s);color:var(--red-d);padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:600">'+escH(c)+'</span>'; }).join('')
-          + S.cats.cCats.map(function(c){ return '<span style="background:var(--purple-s);color:var(--purple);padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:600">'+escH(c)+' 💑</span>'; }).join('')
-          + '</div>' : '');
+      var strength = S.hapticStrength || 10;
+      var label = strength <= 15 ? 'Leggera' : strength <= 30 ? 'Media' : 'Forte';
+      hDesc.textContent = 'Attivo — intensità: ' + label;
     }
   }
 }
@@ -1825,18 +2094,10 @@ function checkForUpdates(){
 var drawerMap = {
   'import-cats': 'overlay-import-cats',
   'set-email': 'overlay-set-email',
+  'haptic': 'overlay-haptic',
   'backup': 'overlay-backup',
   'reset': 'overlay-reset'
 };
-
-function openDrawer(name){
-  var id = drawerMap[name];
-  if(!id) return;
-  if(name === 'set-email'){
-    document.getElementById('def-email-inp').value = S.defEmail || '';
-  }
-  openOverlayById(id);
-}
 
 function openOverlayById(id){
   var el = document.getElementById(id);
