@@ -25,7 +25,7 @@
             navigator.serviceWorker.addEventListener('controllerchange', function(){
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione 1.0.0';
+              t.textContent = '✓ App aggiornata a Versione 1.0.1';
               document.body.appendChild(t);
               setTimeout(function(){ window.location.reload(); }, 1800);
             });
@@ -793,7 +793,7 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.0</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.1</span>
       </div>
     </div>
 
@@ -801,20 +801,20 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
-    <button class="bnav-item" id="bnav-list" onclick="showPage('list',this)">
+    <button class="bnav-item" id="bnav-list" onclick="haptic();showPage('list',this)">
       <span class="bi-ico">📋</span>
       <span class="bi-lbl">Lista</span>
     </button>
-    <button class="bnav-item active" id="bnav-ins" onclick="showPage('ins',this)">
+    <button class="bnav-item active" id="bnav-ins" onclick="haptic();showPage('ins',this)">
       <span class="bi-ico">🏠</span>
       <span class="bi-lbl">Home</span>
     </button>
-    <button class="bnav-fab" onclick="quickAdd()" title="Aggiungi veloce" style="width:72px;height:72px;font-size:2.2rem;top:-10px;box-shadow:0 8px 28px rgba(59,130,246,.6)">+</button>
-    <button class="bnav-item" id="bnav-send" onclick="showPage('send',this)">
+    <button class="bnav-fab" onclick="haptic(true);quickAdd()" title="Aggiungi veloce" style="width:72px;height:72px;font-size:2.2rem;top:-10px;box-shadow:0 8px 28px rgba(59,130,246,.6)">+</button>
+    <button class="bnav-item" id="bnav-send" onclick="haptic();showPage('send',this)">
       <span class="bi-ico">📨</span>
       <span class="bi-lbl">Invia</span>
     </button>
-    <button class="bnav-item" id="bnav-settings" onclick="showPage('settings',this)">
+    <button class="bnav-item" id="bnav-settings" onclick="haptic();showPage('settings',this)">
       <span class="bi-ico">⚙️</span>
       <span class="bi-lbl">Impostazioni</span>
     </button>
@@ -979,12 +979,12 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
       <div id="haptic-strength-wrap">
         <div class="field" style="margin-bottom:8px">
           <label>Intensità</label>
-          <input type="range" id="haptic-strength" min="5" max="50" step="5" value="10"
+          <input type="range" id="haptic-strength" min="5" max="200" step="5" value="10"
             oninput="updateHapticStrength(this.value)"
             style="width:100%;accent-color:var(--blue);cursor:pointer">
         </div>
         <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--sub);margin-bottom:16px">
-          <span>Leggera</span><span>Media</span><span>Forte</span>
+          <span>Leggera</span><span>Media</span><span>Forte</span><span>Max</span>
         </div>
         <button class="btn btn-ghost btn-sm" onclick="testHaptic()" style="width:auto">
           📳 &nbsp;Prova vibrazione
@@ -1084,6 +1084,18 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
       </div>
       <div id="reset-msg" style="font-size:.82rem;margin-bottom:12px"></div>
       <button class="btn btn-danger" onclick="doReset()">🗑 &nbsp;Conferma cancellazione</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Confirm Dialog -->
+<div class="overlay" id="overlay-confirm" style="align-items:center">
+  <div class="confirm-dialog" style="max-width:400px;width:calc(100% - 40px)">
+    <p id="confirm-title" style="font-size:.9rem;font-weight:700;margin-bottom:8px"></p>
+    <p id="confirm-msg" style="font-size:.84rem;color:var(--sub);margin-bottom:22px;line-height:1.6;white-space:pre-line"></p>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button id="confirm-ok" class="btn btn-primary">Conferma</button>
+      <button class="btn btn-ghost" onclick="closeConfirm()">Annulla</button>
     </div>
   </div>
 </div>
@@ -1535,27 +1547,29 @@ var editingId = null;
 function editTx(id){
   var t = S.txs.find(function(x){ return x.id === id; });
   if(!t) return;
-  editingId = id;
-
-  // Precompila il panel come quickAdd ma con i dati esistenti
-  setQType(t.type);
-  npRaw = String(t.amount);
-  npUpdateDisplay();
-  document.getElementById('q-name').value = t.name;
-  fillCatSelect('q-cat', t.type);
-  document.getElementById('q-cat').value = t.cat;
-  document.getElementById('q-date').value = t.date;
-
-  // Cambia titolo e colore tasto salva
-  document.getElementById('panel-quick-title').textContent = 'Modifica movimento';
-  var saveBtn = document.getElementById('panel-save-btn');
-  saveBtn.textContent = '✓  Aggiorna';
-  saveBtn.style.background = 'var(--amber)';
-  saveBtn.style.boxShadow = '0 4px 16px rgba(245,158,11,.4)';
-
-  var p = document.getElementById('panel-quick');
-  p.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
+  haptic();
+  showConfirm(
+    '✏️ Modifica movimento',
+    'Vuoi modificare "' + t.name + '"?',
+    function(){
+      editingId = id;
+      setQType(t.type);
+      npRaw = String(t.amount);
+      npUpdateDisplay();
+      document.getElementById('q-name').value = t.name;
+      fillCatSelect('q-cat', t.type);
+      document.getElementById('q-cat').value = t.cat;
+      document.getElementById('q-date').value = t.date;
+      document.getElementById('panel-quick-title').textContent = 'Modifica movimento';
+      var saveBtn = document.getElementById('panel-save-btn');
+      saveBtn.textContent = '✓  Aggiorna';
+      saveBtn.style.background = 'var(--amber)';
+      saveBtn.style.boxShadow = '0 4px 16px rgba(245,158,11,.4)';
+      var p = document.getElementById('panel-quick');
+      p.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+  );
 }
 
 function closeQuick(){
@@ -1602,13 +1616,29 @@ function saveQTx(){
   drawHomeStats();
 }
 
+function haptic(strong){
+  if(S.hapticEnabled !== false && navigator.vibrate){
+    var base = S.hapticStrength || 10;
+    navigator.vibrate(strong ? Math.min(200, base * 1.5) : base);
+  }
+}
+
 // ═══════════════════════════════════════
 // DELETE TRANSACTION
 // ═══════════════════════════════════════
 function deleteTx(id){
-  S.txs = S.txs.filter(function(t){ return t.id !== id; });
-  save(); drawList();
-  toast('Eliminato');
+  var t = S.txs.find(function(x){ return x.id === id; });
+  if(!t) return;
+  haptic(true);
+  showConfirm(
+    '🗑 Elimina movimento',
+    'Vuoi eliminare "' + t.name + '"?\nQuesta azione è irreversibile.',
+    function(){
+      S.txs = S.txs.filter(function(x){ return x.id !== id; });
+      save(); drawList(); drawHomeStats();
+      toast('Eliminato');
+    }
+  );
 }
 
 // ═══════════════════════════════════════
@@ -1841,7 +1871,7 @@ function updateSettingsPage(){
       hDesc.textContent = 'Disattivato';
     } else {
       var strength = S.hapticStrength || 10;
-      var label = strength <= 15 ? 'Leggera' : strength <= 30 ? 'Media' : 'Forte';
+      var label = strength <= 30 ? 'Leggera' : strength <= 80 ? 'Media' : strength <= 140 ? 'Forte' : 'Max';
       hDesc.textContent = 'Attivo — intensità: ' + label;
     }
   }
@@ -2055,6 +2085,34 @@ var drawerMap = {
   'backup': 'overlay-backup',
   'reset': 'overlay-reset'
 };
+
+// ═══════════════════════════════════════
+// GENERIC CONFIRM DIALOG
+// ═══════════════════════════════════════
+var confirmCallback = null;
+
+function showConfirm(title, msg, onOk){
+  confirmCallback = onOk;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent = msg;
+  var overlay = document.getElementById('overlay-confirm');
+  overlay.style.display = 'flex';
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeConfirm(){
+  var overlay = document.getElementById('overlay-confirm');
+  overlay.style.display = 'none';
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+  confirmCallback = null;
+}
+
+document.getElementById('confirm-ok').addEventListener('click', function(){
+  closeConfirm();
+  if(confirmCallback) confirmCallback();
+});
 
 function openOverlayById(id){
   var el = document.getElementById(id);
