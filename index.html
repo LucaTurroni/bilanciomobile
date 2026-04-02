@@ -25,7 +25,7 @@
             navigator.serviceWorker.addEventListener('controllerchange', function(){
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione 1.0.2';
+              t.textContent = '✓ App aggiornata a Versione 1.0.3';
               document.body.appendChild(t);
               setTimeout(function(){ window.location.reload(); }, 1800);
             });
@@ -841,7 +841,7 @@ select.inp option{font-size:.85rem}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.2</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.3</span>
       </div>
     </div>
 
@@ -1158,7 +1158,7 @@ select.inp option{font-size:.85rem}
 </div>
 
 <!-- Generic Confirm Dialog -->
-<div class="overlay" id="overlay-confirm" style="align-items:center">
+<div class="overlay" id="overlay-confirm" style="align-items:center;display:none">
   <div class="confirm-dialog" style="max-width:400px;width:calc(100% - 40px)">
     <p id="confirm-title" style="font-size:.9rem;font-weight:700;margin-bottom:8px"></p>
     <p id="confirm-msg" style="font-size:.84rem;color:var(--sub);margin-bottom:22px;line-height:1.6;white-space:pre-line"></p>
@@ -2315,8 +2315,9 @@ function closeConfirm(){
 }
 
 document.getElementById('confirm-ok').addEventListener('click', function(){
+  var cb = confirmCallback;
   closeConfirm();
-  if(confirmCallback) confirmCallback();
+  if(cb) cb();
 });
 
 function openOverlayById(id){
