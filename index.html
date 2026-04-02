@@ -25,9 +25,12 @@
             navigator.serviceWorker.addEventListener('controllerchange', function(){
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione 1.0.3';
+              t.textContent = '✓ App aggiornata a Versione 1.0.4';
               document.body.appendChild(t);
-              setTimeout(function(){ window.location.reload(); }, 1800);
+              setTimeout(function(){
+                // Hard reload: bypasses bfcache and avoids partial layout restore
+                window.location.replace(window.location.href.split('?')[0] + '?v=' + Date.now());
+              }, 1800);
             });
             newSW.postMessage({ type: 'SKIP_WAITING' });
           }
@@ -569,6 +572,15 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 .npk-ok{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 4px 14px rgba(34,197,94,.4);}
 .npk-ok:active{background:var(--green-d);transform:scale(.94);}
 
+/* Blinking cursor on amount display */
+@keyframes blink{ 0%,100%{opacity:1} 50%{opacity:0} }
+.amount-cursor{
+  display:inline-block;width:2px;height:1em;
+  background:currentColor;margin-left:2px;
+  animation:blink 1s step-end infinite;
+  vertical-align:text-bottom;border-radius:1px;
+}
+
 /* Category select — testo piccolo per scorrere meno */
 select.inp{font-size:.82rem}
 select.inp optgroup{font-size:.78rem;font-weight:700;color:var(--sub)}
@@ -841,7 +853,7 @@ select.inp option{font-size:.85rem}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.3</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.4</span>
       </div>
     </div>
 
@@ -1685,9 +1697,6 @@ function setQType(type){
 var npRaw = '0'; // string representation
 
 function npKey(k){
-  if(S.hapticEnabled !== false && navigator.vibrate){
-    navigator.vibrate(k === 'del' || k === 'clear' ? Math.min(50, (S.hapticStrength||10)*2) : (S.hapticStrength||10));
-  }
   if(k === 'clear'){ npRaw = '0'; }
   else if(k === 'del'){
     npRaw = npRaw.slice(0,-1);
@@ -1710,7 +1719,7 @@ function npKey(k){
 
 function npUpdateDisplay(){
   var el = document.getElementById('q-amount-display');
-  if(el) el.textContent = npRaw || '0';
+  if(el) el.innerHTML = escH(npRaw || '0') + '<span class="amount-cursor"></span>';
 }
 
 function npReset(){
@@ -1822,11 +1831,20 @@ function saveQTx(){
 }
 
 function haptic(strong){
-  if(S.hapticEnabled !== false && navigator.vibrate){
-    var base = S.hapticStrength || 10;
-    navigator.vibrate(strong ? Math.min(200, base * 1.5) : base);
-  }
+  if(S.hapticEnabled === false) return;
+  if(!navigator.vibrate) return;
+  var ms = strong ? Math.min(200, Math.round((S.hapticStrength||10) * 1.5)) : (S.hapticStrength||10);
+  try{ navigator.vibrate(ms); }catch(e){}
 }
+
+// Attach haptic to numpad keys via touchstart for maximum reliability
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('.npk').forEach(function(btn){
+    btn.addEventListener('touchstart', function(){
+      haptic(this.classList.contains('npk-del') || this.classList.contains('npk-clear'));
+    }, { passive: true });
+  });
+});
 
 // ═══════════════════════════════════════
 // DELETE TRANSACTION
