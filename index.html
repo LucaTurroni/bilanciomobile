@@ -25,7 +25,7 @@
             navigator.serviceWorker.addEventListener('controllerchange', function(){
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione 1.0.1';
+              t.textContent = '✓ App aggiornata a Versione 1.0.2';
               document.body.appendChild(t);
               setTimeout(function(){ window.location.reload(); }, 1800);
             });
@@ -569,6 +569,54 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 .npk-ok{background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 4px 14px rgba(34,197,94,.4);}
 .npk-ok:active{background:var(--green-d);transform:scale(.94);}
 
+/* Category select — testo piccolo per scorrere meno */
+select.inp{font-size:.82rem}
+select.inp optgroup{font-size:.78rem;font-weight:700;color:var(--sub)}
+select.inp option{font-size:.85rem}
+
+/* Custom category picker (fullscreen-safe) */
+.cat-picker-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(4px);
+  display:none;align-items:flex-end;justify-content:center;
+}
+.cat-picker-overlay.open{display:flex;animation:fadeIn .18s ease}
+.cat-picker-sheet{
+  width:100%;max-width:480px;
+  background:var(--surface);
+  border-radius:24px 24px 0 0;
+  max-height:70vh;display:flex;flex-direction:column;
+  animation:slideUp .22s cubic-bezier(.32,.72,0,1);
+  padding-bottom:calc(12px + var(--safe-bot));
+}
+.cat-picker-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px 10px;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.cat-picker-title{font-family:'Sora',sans-serif;font-weight:700;font-size:.95rem}
+.cat-picker-close{
+  width:30px;height:30px;border-radius:var(--r-xs);
+  background:var(--surface2);border:1.5px solid var(--border);
+  color:var(--sub);font-size:.85rem;display:flex;align-items:center;
+  justify-content:center;cursor:pointer;font-family:var(--font);
+}
+.cat-picker-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px 0}
+.cat-picker-group{
+  font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--placeholder);padding:10px 18px 4px;
+}
+.cat-picker-item{
+  padding:13px 18px;font-size:.88rem;font-weight:500;
+  cursor:pointer;transition:background .12s;
+  border-left:3px solid transparent;
+}
+.cat-picker-item:active{background:var(--surface2)}
+.cat-picker-item.sel{
+  background:var(--blue-s);color:var(--blue);
+  border-left-color:var(--blue);font-weight:700;
+}
+
 /* Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@600;700&display=swap');
 .dark .dark-topbar-bg{background:rgba(9,11,17,.52)!important;border-bottom:1px solid rgba(255,255,255,.06)!important;}
@@ -793,7 +841,7 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.1</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.2</span>
       </div>
     </div>
 
@@ -859,7 +907,17 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
     <!-- Categoria -->
     <div class="field" style="margin-bottom:10px">
       <label style="margin-bottom:5px">Categoria</label>
-      <select class="inp" id="q-cat" autocomplete="off" style="padding:10px 14px;"><option value="">— Seleziona —</option></select>
+      <div id="q-cat-display" onclick="openCatPicker()" style="
+        width:100%;background:rgba(255,255,255,.7);border:1.5px solid var(--border);
+        border-radius:var(--r-s);padding:10px 40px 10px 14px;color:var(--text);
+        font-family:var(--font);font-size:.82rem;cursor:pointer;position:relative;
+        min-height:42px;display:flex;align-items:center;
+        background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%228%22 viewBox=%220 0 12 8%22%3E%3Cpath d=%22M1 1l5 5 5-5%22 stroke=%22%236b7280%22 stroke-width=%221.5%22 fill=%22none%22 stroke-linecap=%22round%22/%3E%3C/svg%3E');
+        background-repeat:no-repeat;background-position:right 14px center;
+      ">
+        <span id="q-cat-label" style="color:var(--placeholder)">— Seleziona —</span>
+      </div>
+      <input type="hidden" id="q-cat" value="">
     </div>
 
     <!-- Data -->
@@ -1088,6 +1146,17 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
   </div>
 </div>
 
+<!-- Custom Category Picker -->
+<div class="cat-picker-overlay" id="cat-picker-overlay" onclick="closeCatPicker(event)">
+  <div class="cat-picker-sheet">
+    <div class="cat-picker-hdr">
+      <span class="cat-picker-title" id="cat-picker-title">Seleziona categoria</span>
+      <button class="cat-picker-close" onclick="closeCatPickerById()">✕</button>
+    </div>
+    <div class="cat-picker-list" id="cat-picker-list"></div>
+  </div>
+</div>
+
 <!-- Generic Confirm Dialog -->
 <div class="overlay" id="overlay-confirm" style="align-items:center">
   <div class="confirm-dialog" style="max-width:400px;width:calc(100% - 40px)">
@@ -1123,7 +1192,7 @@ input[type=number].inp::-webkit-inner-spin-button{-webkit-appearance:none}
 // ═══════════════════════════════════════
 var S = {
   txs: [],
-  cats: { eCats: [], cCats: [] },  // mirrored from desktop
+  cats: { eCats: [], cCats: [], iCats: [] },
   defEmail: '',
   theme: 'light',
   hapticEnabled: true,
@@ -1202,41 +1271,159 @@ function showPage(id, btn){
 // ═══════════════════════════════════════
 // CATEGORIES
 // ═══════════════════════════════════════
+function sortAlpha(arr){ return (arr||[]).slice().sort(function(a,b){ return a.localeCompare(b,'it'); }); }
+
 function allCats(type){
-  // type: 'income' -> only eCats; 'expense' -> eCats + cCats(with 💑); both otherwise
-  var cats = [];
-  // income special
-  cats.push('Stipendio / Entrata');
-  if(type === 'income') return cats;
-  // expense personal
-  (S.cats.eCats || []).forEach(function(c){ cats.push(c); });
-  // expense couple
-  (S.cats.cCats || []).forEach(function(c){ cats.push(c + ' 💑'); });
-  return cats;
+  if(type === 'income'){
+    var iCats = sortAlpha(S.cats.iCats);
+    return iCats.length ? iCats : ['Entrata'];
+  }
+  // expense: personali + coppia
+  var e = sortAlpha(S.cats.eCats).map(function(c){ return {label:c, value:c, group:'Personali'}; });
+  var c = sortAlpha(S.cats.cCats).map(function(c){ return {label:c+' 💑', value:c+' 💑', group:'Coppia 💑'}; });
+  return e.concat(c);
 }
 
 function fillCatSelect(selId, type){
+  // For q-cat we use the custom picker — just update the type and reset value if needed
+  if(selId === 'q-cat'){
+    catPickerCurrentType = type;
+    // If current value doesn't belong to new type, reset
+    var cur = document.getElementById('q-cat') ? document.getElementById('q-cat').value : '';
+    var valid = false;
+    if(type === 'income'){
+      var iCats = allCats('income');
+      valid = iCats.indexOf(cur) !== -1;
+    } else {
+      var items = allCats('expense');
+      valid = items.some(function(item){ return item.value === cur; });
+    }
+    if(!valid){
+      var inp = document.getElementById('q-cat');
+      if(inp) inp.value = '';
+      var lbl = document.getElementById('q-cat-label');
+      if(lbl){ lbl.textContent = '— Seleziona —'; lbl.style.color = 'var(--placeholder)'; }
+    }
+    return;
+  }
+  // For real selects (remap-target etc.)
   var sel = document.getElementById(selId);
   if(!sel) return;
   var cur = sel.value;
-  sel.innerHTML = '<option value="">— Seleziona categoria —</option>';
-  allCats(type).forEach(function(c){
-    var o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    sel.appendChild(o);
-  });
+  sel.innerHTML = '<option value="">— Seleziona —</option>';
+
+  if(type === 'income'){
+    var cats = allCats('income');
+    cats.forEach(function(c){
+      var o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+  } else {
+    var items = allCats('expense');
+    var groups = {};
+    items.forEach(function(item){
+      if(!groups[item.group]) groups[item.group] = [];
+      groups[item.group].push(item);
+    });
+    ['Personali','Coppia 💑'].forEach(function(grpName){
+      if(!groups[grpName] || !groups[grpName].length) return;
+      var og = document.createElement('optgroup');
+      og.label = '── ' + grpName + ' ──';
+      groups[grpName].forEach(function(item){
+        var o = document.createElement('option');
+        o.value = item.value; o.textContent = item.label;
+        og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    // Also add income cats for remap
+    var iCats = allCats('income');
+    if(iCats.length){
+      var og2 = document.createElement('optgroup');
+      og2.label = '── Entrate ──';
+      iCats.forEach(function(c){
+        var o = document.createElement('option'); o.value = c; o.textContent = c;
+        og2.appendChild(o);
+      });
+      sel.appendChild(og2);
+    }
+  }
+
   if(cur) sel.value = cur;
 }
 
 function checkNoCats(){
-  var hasCats = (S.cats.eCats && S.cats.eCats.length) || (S.cats.cCats && S.cats.cCats.length);
+  var hasCats = (S.cats.eCats && S.cats.eCats.length) || (S.cats.cCats && S.cats.cCats.length) || (S.cats.iCats && S.cats.iCats.length);
   var el = document.getElementById('no-cats-ins');
   if(el) el.style.display = hasCats ? 'none' : '';
 }
 
 // ═══════════════════════════════════════
-// CATEGORIES — SHOW & IMPORT
+// CUSTOM CATEGORY PICKER
 // ═══════════════════════════════════════
+var catPickerCurrentType = 'expense';
+
+function openCatPicker(){
+  haptic();
+  buildCatPickerList(catPickerCurrentType);
+  var ov = document.getElementById('cat-picker-overlay');
+  ov.style.display = 'flex';
+  ov.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCatPickerById(){
+  var ov = document.getElementById('cat-picker-overlay');
+  ov.classList.remove('open');
+  ov.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function closeCatPicker(e){
+  if(e && e.target !== document.getElementById('cat-picker-overlay')) return;
+  closeCatPickerById();
+}
+
+function buildCatPickerList(type){
+  var list = document.getElementById('cat-picker-list');
+  var curVal = document.getElementById('q-cat').value;
+  var h = '';
+
+  if(type === 'income'){
+    var cats = allCats('income');
+    cats.forEach(function(c){
+      var sel = c === curVal ? ' sel' : '';
+      h += '<div class="cat-picker-item'+sel+'" onclick="selectCat(\''+escH(c).replace(/'/g,"\\'")+'\')">'+escH(c)+'</div>';
+    });
+  } else {
+    var items = allCats('expense');
+    var lastGroup = '';
+    items.forEach(function(item){
+      if(item.group !== lastGroup){
+        h += '<div class="cat-picker-group">'+escH(item.group)+'</div>';
+        lastGroup = item.group;
+      }
+      var sel = item.value === curVal ? ' sel' : '';
+      h += '<div class="cat-picker-item'+sel+'" onclick="selectCat(\''+item.value.replace(/'/g,"\\'").replace(/💑/g,'💑')+'\')">'+escH(item.label)+'</div>';
+    });
+  }
+  if(!h) h = '<div style="padding:20px 18px;font-size:.85rem;color:var(--sub)">Nessuna categoria disponibile.</div>';
+  list.innerHTML = h;
+}
+
+function selectCat(val){
+  document.getElementById('q-cat').value = val;
+  var lbl = document.getElementById('q-cat-label');
+  if(lbl){
+    lbl.textContent = val || '— Seleziona —';
+    lbl.style.color = val ? 'var(--text)' : 'var(--placeholder)';
+  }
+  closeCatPickerById();
+  haptic();
+}
+
+
 var pendingNewCats = null; // cats waiting to be applied after migration
 var migrationQueue = [];   // categories to migrate one by one
 var migrationIdx = 0;
@@ -1253,12 +1440,18 @@ function openDrawer(name){
 function renderCatsDisplay(){
   var el = document.getElementById('cats-current-display');
   if(!el) return;
-  var e = S.cats.eCats || [], c = S.cats.cCats || [];
-  if(!e.length && !c.length){
+  var i = sortAlpha(S.cats.iCats), e = sortAlpha(S.cats.eCats), c = sortAlpha(S.cats.cCats);
+  if(!i.length && !e.length && !c.length){
     el.innerHTML = '<p style="font-size:.84rem;color:var(--sub);font-style:italic">Nessuna categoria caricata.</p>';
     return;
   }
   var h = '<p style="font-size:.72rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);margin-bottom:10px">Categorie attuali</p>';
+  if(i.length){
+    h += '<p style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px">Entrate</p>';
+    h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
+    i.forEach(function(c){ h += '<span style="background:var(--green-s);color:var(--green-d);padding:4px 10px;border-radius:12px;font-size:.75rem;font-weight:600">'+escH(c)+'</span>'; });
+    h += '</div>';
+  }
   if(e.length){
     h += '<p style="font-size:.75rem;font-weight:700;color:var(--sub);margin-bottom:6px">Personali</p>';
     h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">';
@@ -1282,27 +1475,27 @@ function importCatsFile(input){
       var p = JSON.parse(e.target.result);
       var newECats = p.eCats || (p.cats && p.cats.eCats) || [];
       var newCCats = p.cCats || (p.cats && p.cats.cCats) || [];
-      if(!newECats.length && !newCCats.length) throw new Error('nessuna categoria trovata');
+      var newICats = p.iCats || (p.cats && p.cats.iCats) || [];
+      if(!newECats.length && !newCCats.length && !newICats.length) throw new Error('nessuna categoria trovata');
 
       // Find categories that exist now but are missing in new file
-      var allOld = (S.cats.eCats||[]).concat((S.cats.cCats||[]).map(function(c){ return c+' 💑'; }));
-      var allNew = newECats.concat(newCCats.map(function(c){ return c+' 💑'; }));
+      var allOld = (S.cats.eCats||[]).concat((S.cats.cCats||[]).map(function(c){ return c+' 💑'; })).concat(S.cats.iCats||[]);
+      var allNew = newECats.concat(newCCats.map(function(c){ return c+' 💑'; })).concat(newICats);
       var removed = allOld.filter(function(c){ return allNew.indexOf(c) === -1; });
 
-      // Check which removed cats have transactions
       var removedWithTxs = removed.filter(function(cat){
         return S.txs.some(function(t){ return t.cat === cat; });
       });
 
       if(removedWithTxs.length > 0){
-        // Show warning and start migration flow
-        pendingNewCats = { eCats: newECats, cCats: newCCats };
+        pendingNewCats = { eCats: newECats, cCats: newCCats, iCats: newICats };
         showMigrationWarning(removedWithTxs, allNew);
       } else {
-        // Safe to apply directly
-        applyCats({ eCats: newECats, cCats: newCCats });
+        applyCats({ eCats: newECats, cCats: newCCats, iCats: newICats });
         var res = document.getElementById('cats-import-result');
-        if(res) res.innerHTML = '<span style="color:var(--green-d)">✓ '+newECats.length+' categorie personali e '+newCCats.length+' di coppia caricate.</span>';
+        var msg = newICats.length ? newICats.length+' entrate, ' : '';
+        msg += newECats.length+' personali, '+newCCats.length+' coppia.';
+        if(res) res.innerHTML = '<span style="color:var(--green-d)">✓ Caricate: '+msg+'</span>';
         renderCatsDisplay();
         toast('Categorie aggiornate!');
       }
@@ -1471,7 +1664,14 @@ function setQType(type){
   if(wrap) wrap.style.borderColor = col;
   if(sign){ sign.textContent = isIn ? '+' : '−'; sign.style.color = col; }
   if(disp) disp.style.color = col;
+  catPickerCurrentType = type;
   fillCatSelect('q-cat', type);
+  // Reset cat display when type changes
+  var lbl = document.getElementById('q-cat-label');
+  if(lbl && document.getElementById('q-cat').value === ''){
+    lbl.textContent = '— Seleziona —';
+    lbl.style.color = 'var(--placeholder)';
+  }
 }
 
 // ═══════════════════════════════════════
@@ -1528,6 +1728,9 @@ function quickAdd(){
   setQType('expense');
   npReset();
   document.getElementById('q-name').value = '';
+  document.getElementById('q-cat').value = '';
+  var lbl = document.getElementById('q-cat-label');
+  if(lbl){ lbl.textContent = '— Seleziona —'; lbl.style.color = 'var(--placeholder)'; }
   fillCatSelect('q-cat', 'expense');
   document.getElementById('panel-quick-title').textContent = 'Nuovo movimento';
   var saveBtn = document.getElementById('panel-save-btn');
@@ -1559,6 +1762,8 @@ function editTx(id){
       document.getElementById('q-name').value = t.name;
       fillCatSelect('q-cat', t.type);
       document.getElementById('q-cat').value = t.cat;
+      var lbl = document.getElementById('q-cat-label');
+      if(lbl){ lbl.textContent = t.cat || '— Seleziona —'; lbl.style.color = t.cat ? 'var(--text)' : 'var(--placeholder)'; }
       document.getElementById('q-date').value = t.date;
       document.getElementById('panel-quick-title').textContent = 'Modifica movimento';
       var saveBtn = document.getElementById('panel-save-btn');

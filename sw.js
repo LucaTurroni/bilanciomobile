@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cm-1.0.1';
+const CACHE_VERSION = 'cm-1.0.2';
 const CACHE_NAME = 'bilancio-' + CACHE_VERSION;
 
 self.addEventListener('install', function(e){
