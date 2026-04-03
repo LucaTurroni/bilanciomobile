@@ -25,7 +25,7 @@
             navigator.serviceWorker.addEventListener('controllerchange', function(){
               var t = document.createElement('div');
               t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:9999;padding:13px 22px;border-radius:12px;font-size:.85rem;font-weight:600;color:#fff;background:#22c55e;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap;animation:fadeIn .3s ease';
-              t.textContent = '✓ App aggiornata a Versione 1.0.4';
+              t.textContent = '✓ App aggiornata a Versione 1.0.5';
               document.body.appendChild(t);
               setTimeout(function(){
                 // Hard reload: bypasses bfcache and avoids partial layout restore
@@ -853,7 +853,7 @@ select.inp option{font-size:.85rem}
 
       <!-- Versione -->
       <div style="text-align:center;padding:20px 0 6px">
-        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.4</span>
+        <span style="font-size:.7rem;color:var(--placeholder);letter-spacing:.06em">Versione 1.0.5</span>
       </div>
     </div>
 
@@ -912,8 +912,8 @@ select.inp option{font-size:.85rem}
 
     <!-- Nome -->
     <div class="field" style="margin-bottom:10px">
-      <label style="margin-bottom:5px">Nome / Descrizione</label>
-      <input type="text" class="inp" id="q-name" placeholder="es. Spesa supermercato…" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" data-form-type="other" style="padding:10px 14px;">
+      <label style="margin-bottom:5px">Nota <span style="font-weight:400;color:var(--placeholder)">(opzionale)</span></label>
+      <input type="text" class="inp" id="q-name" placeholder="Nota (opzionale)…" autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="false" data-form-type="other" style="padding:10px 14px;">
     </div>
 
     <!-- Categoria -->
@@ -1696,34 +1696,36 @@ function setQType(type){
 // ═══════════════════════════════════════
 var npRaw = '0'; // string representation
 
+var npRaw = ''; // empty = show cursor only
+
 function npKey(k){
-  if(k === 'clear'){ npRaw = '0'; }
+  if(k === 'clear'){ npRaw = ''; }
   else if(k === 'del'){
     npRaw = npRaw.slice(0,-1);
-    if(!npRaw || npRaw === '-') npRaw = '0';
   }
   else if(k === ','){
+    if(!npRaw) npRaw = '0';
     if(npRaw.indexOf('.') === -1) npRaw += '.';
   }
   else {
-    if(npRaw === '0') npRaw = k;
-    else {
-      // max 2 decimals
-      var parts = npRaw.split('.');
-      if(parts[1] !== undefined && parts[1].length >= 2) return;
-      npRaw += k;
-    }
+    if(!npRaw && k === '0') return; // no leading zero
+    // max 2 decimals
+    var parts = npRaw.split('.');
+    if(parts[1] !== undefined && parts[1].length >= 2) return;
+    npRaw += k;
   }
   npUpdateDisplay();
 }
 
 function npUpdateDisplay(){
   var el = document.getElementById('q-amount-display');
-  if(el) el.innerHTML = escH(npRaw || '0') + '<span class="amount-cursor"></span>';
+  if(!el) return;
+  var display = npRaw || '';
+  el.innerHTML = (display ? escH(display) : '') + '<span class="amount-cursor"></span>';
 }
 
 function npReset(){
-  npRaw = '0';
+  npRaw = '';
   npUpdateDisplay();
 }
 
@@ -1766,7 +1768,7 @@ function editTx(id){
     function(){
       editingId = id;
       setQType(t.type);
-      npRaw = String(t.amount);
+      npRaw = t.amount ? String(t.amount) : '';
       npUpdateDisplay();
       document.getElementById('q-name').value = t.name;
       fillCatSelect('q-cat', t.type);
@@ -1800,13 +1802,12 @@ function closeQuick(){
 }
 
 function saveQTx(){
-  var amount = parseFloat(npRaw);
+  var amount = parseFloat(npRaw || '0');
   var name = document.getElementById('q-name').value.trim();
   var cat = document.getElementById('q-cat').value;
   var date = document.getElementById('q-date').value;
 
   if(!amount || amount <= 0){ toast('Inserisci un importo valido', true); return; }
-  if(!name){ toast('Inserisci un nome', true); return; }
   if(!cat){ toast('Seleziona una categoria', true); return; }
   if(!date){ toast('Seleziona una data', true); return; }
 
@@ -1923,8 +1924,8 @@ function drawList(){
       h += '<div class="tx-item">'
         + '<div class="tx-dot '+cls+'"></div>'
         + '<div class="tx-body">'
-        + '<div class="tx-name">'+escH(t.name)+'</div>'
-        + '<div class="tx-meta">'+escH(t.cat)+'</div>'
+        + '<div class="tx-name">'+escH(t.cat)+'</div>'
+        + (t.name ? '<div class="tx-meta">'+escH(t.name)+'</div>' : '')
         + '</div>'
         + '<div class="tx-amt '+cls+'">'+sign+' €'+fmt(t.amount)+'</div>'
         + '<button class="tx-del" onclick="editTx('+t.id+')" style="color:var(--blue);border-color:rgba(59,130,246,.3);background:var(--blue-s)">✏️</button>'
